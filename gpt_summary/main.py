@@ -5,7 +5,12 @@ import json
 from datetime import datetime, timezone, timedelta
 import openai
 import tiktoken
-from common.utils import doc_split
+from common.openai_api import ask_gpt
+from common import prompt_lib
+from common.multi_thread import process_multi_thread
+from pydantic import BaseModel
+class output_format(BaseModel):
+    markdown_summary: str
 
 EMBEDDING_MODEL = "text-embedding-3-large"
 
@@ -42,16 +47,31 @@ for i in range(len(json_data)): ## 대화방 단위
             if mapping[k].get("message").get("content").get("parts"):
                 msg = mapping[k].get("message").get("content").get("parts")[0]
                 if len(msg) >0 and msg:
-                    temp += f"{role}: {mapping[k].get("message").get("content").get("parts")[0]}\n\n"
+                    temp += f"{role}: {msg}\n\n"
             else:
-                temp += f"{role}: {mapping[k].get("message").get("content").get("text")}\n\n"
+                txt_msg = mapping[k].get("message").get("content").get("text")
+                temp += f"{role}: {txt_msg}\n\n"
     data_by_time[date_str].append(temp)       
 
-cnt = []
+
+def summary_process(temp_data):
+    resp = ask_gpt(temp_data, prompt_lib.summary_prompt, output_format).markdown_summary
+    return resp
+
+write_path = "./result"
+sum_token = 0
 for day in data_by_time:
+    f_name = day.replace("-", "_")+".md"
+    temp = ""
+    temp_datas = []
     for chat_room in data_by_time[day]:
         chat_room = chat_room.replace('<|endoftext|>', '')
-        print(count_gpt4o_tokens(chat_room))
-        cnt.append(count_gpt4o_tokens(chat_room))
+        token_num = count_gpt4o_tokens(chat_room)
+        sum_token += token_num
+        temp_datas.append(chat_room)
+    after_data = process_multi_thread(temp_datas, summary_process)
 
-print(sorted(cnt, reverse=True))
+    with open(os.path.join(write_path, f_name), 'w', encoding='utf-8') as wr:
+        wr.write("\n\n".join(after_data))
+
+print("예상가격(달러):", sum_token/1000000*5)
