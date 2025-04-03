@@ -33,8 +33,11 @@ def summary_process(temp_data):
 
 
 if __name__ == "__main__":
+    b_summary = False
     data_path = BASE_DIR + r"/conversations.json"
     json_data = json.load(open(data_path))
+    write_path_summary = "./result/summary"
+    write_path_concat = "./result/concat"
     print(len(json_data))
 
     data_by_time = {}
@@ -45,26 +48,28 @@ if __name__ == "__main__":
         date_str= get_korea_time(create_time)
         if date_str not in data_by_time:
             data_by_time[date_str] = []
-        temp = ""
+        temp_txt_l = []
         for k in mapping:   ## 대화말 단위
             if mapping[k].get("message"):
                 role = mapping[k].get("message").get("author")["role"]
                 if mapping[k].get("message").get("content").get("parts"):
                     msg = mapping[k].get("message").get("content").get("parts")[0]
                     if len(msg) >0 and msg:
-                        temp += f"{role}: {msg}\n\n"
+                        temp_txt_l.append(f"{role}: {msg}\n\n")
                 else:
                     txt_msg = mapping[k].get("message").get("content").get("text")
-                    temp += f"{role}: {txt_msg}\n\n"
-        data_by_time[date_str].append(temp)
+                    temp_txt_l.append(f"{role}: {txt_msg}\n\n")
+        temp_txt_join = "".join(temp_txt_l)
+
+        data_by_time[date_str].append(temp_txt_join)
 
 
-    write_path = "./result"
+
     sum_token = 0
     b_multi_thread = False
 
     for day in data_by_time:
-        if day.replace("-", "_")+".md" in os.listdir(write_path):   ## 이미 있는 날짜의 파일이면 다시 생성하지 않음.
+        if day.replace("-", "_")+".md" in os.listdir(write_path_summary):   ## 이미 있는 날짜의 파일이면 다시 생성하지 않음.
             continue
         f_name = day.replace("-", "_")+".md"
         temp = []
@@ -74,13 +79,16 @@ if __name__ == "__main__":
             token_num = count_gpt4o_tokens(chat_room)
             sum_token += token_num
             temp_datas.append(chat_room)
-            if not b_multi_thread:
+            if not b_multi_thread and b_summary:
                 temp.append(ask_gpt(chat_room, prompt_lib.summary_prompt, output_format).markdown_summary)
-        if b_multi_thread:
-            after_data = process_multi_thread(temp_datas, summary_process)
-        else:
-            after_data = temp
-        with open(os.path.join(write_path, f_name), 'w', encoding='utf-8') as wr:
-            wr.write("\n\n".join(after_data))
+        if b_summary:
+            if b_multi_thread:
+                after_data = process_multi_thread(temp_datas, summary_process)
+            else:
+                after_data = temp
+            with open(os.path.join(write_path_summary, f_name), 'w', encoding='utf-8') as wr:
+                wr.write("\n########## New Chat ##########\n".join(after_data))
+        with open(os.path.join(write_path_concat, f_name.replace(".md", ".txt")), 'w', encoding='utf-8-sig') as wr:
+            wr.write("\n########## New Chat ##########\n".join(temp_datas))
 
     print("예상가격(달러):", sum_token/1000000*5)
