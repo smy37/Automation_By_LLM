@@ -9,6 +9,8 @@ from common.openai_api import ask_gpt
 from common import prompt_lib
 from common.multi_thread import process_multi_thread
 from pydantic import BaseModel
+from common import utils
+from common import variable
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 def get_korea_time(utc_time):
@@ -38,6 +40,7 @@ if __name__ == "__main__":
     json_data = json.load(open(data_path))
     write_path_summary = "./result/summary"
     write_path_concat = "./result/concat"
+    INPUT_MAX_TOKEN = 16384
     print(len(json_data))
 
     data_by_time = {}
@@ -74,11 +77,19 @@ if __name__ == "__main__":
         f_name = day.replace("-", "_")+".md"
         temp = []
         temp_datas = []
+        temp_token_num = 0      ## 최대 인풋 토큰 넘는 것을 방지하기 위해 카운팅
+        chunk_num = 1
         for chat_room in data_by_time[day]:
             chat_room = chat_room.replace('<|endoftext|>', '')
             token_num = count_gpt4o_tokens(chat_room)
             sum_token += token_num
-            temp_datas.append(chat_room)
+            temp_token_num += token_num
+            if temp_token_num > INPUT_MAX_TOKEN:
+                chunks = utils.doc_split(chat_room, variable.EMBEDDING_MODEL, INPUT_MAX_TOKEN)
+                for chunk in chunks:
+                    temp_datas.append(chunk)
+            else:
+                temp_datas.append(chat_room)
             if not b_multi_thread and b_summary:
                 temp.append(ask_gpt(chat_room, prompt_lib.summary_prompt, output_format).markdown_summary)
         if b_summary:
