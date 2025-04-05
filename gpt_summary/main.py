@@ -35,7 +35,7 @@ def summary_process(temp_data):
 
 
 if __name__ == "__main__":
-    b_summary = False
+    b_multi_thread = True
     data_path = BASE_DIR + r"/conversations.json"
     json_data = json.load(open(data_path))
     write_path_summary = "./result/summary"
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 
     sum_token = 0
-    b_multi_thread = False
+
 
     for day in data_by_time:
         if day.replace("-", "_")+".md" in os.listdir(write_path_summary):   ## 이미 있는 날짜의 파일이면 다시 생성하지 않음.
@@ -84,21 +84,26 @@ if __name__ == "__main__":
             token_num = count_gpt4o_tokens(chat_room)
             sum_token += token_num
             temp_token_num += token_num
-            if temp_token_num > INPUT_MAX_TOKEN:
-                chunks = utils.doc_split(chat_room, variable.EMBEDDING_MODEL, INPUT_MAX_TOKEN)
-                for chunk in chunks:
-                    temp_datas.append(chunk)
-            else:
-                temp_datas.append(chat_room)
-            if not b_multi_thread and b_summary:
-                temp.append(ask_gpt(chat_room, prompt_lib.summary_prompt, output_format).markdown_summary)
-        if b_summary:
+
             if b_multi_thread:
-                after_data = process_multi_thread(temp_datas, summary_process)
+                if temp_token_num > INPUT_MAX_TOKEN:
+                    chunks = utils.doc_split(chat_room, variable.EMBEDDING_MODEL, INPUT_MAX_TOKEN)
+                    for chunk in chunks:
+                        temp_datas.append(chunk)
+                else:
+                    temp_datas.append(chat_room)
             else:
-                after_data = temp
-            with open(os.path.join(write_path_summary, f_name), 'w', encoding='utf-8') as wr:
-                wr.write("\n########## New Chat ##########\n".join(after_data))
+                if temp_token_num > INPUT_MAX_TOKEN:
+                    chunks = utils.doc_split(chat_room, variable.EMBEDDING_MODEL, INPUT_MAX_TOKEN)
+                    for chunk in chunks:
+                        temp.append(ask_gpt(chunk, prompt_lib.summary_prompt, output_format).markdown_summary)
+                else:
+                    temp.append(ask_gpt(chat_room, prompt_lib.summary_prompt, output_format).markdown_summary)
+
+        after_data = process_multi_thread(temp_datas, summary_process) if b_multi_thread else temp
+
+        with open(os.path.join(write_path_summary, f_name), 'w', encoding='utf-8') as wr:
+            wr.write("\n########## New Chat ##########\n".join(after_data))
         with open(os.path.join(write_path_concat, f_name.replace(".md", ".txt")), 'w', encoding='utf-8-sig') as wr:
             wr.write("\n########## New Chat ##########\n".join(temp_datas))
 
