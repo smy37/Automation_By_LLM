@@ -29,8 +29,8 @@ def count_gpt4o_tokens(text: str) -> int:
 class output_format(BaseModel):
     markdown_summary: str
 
-def summary_process(temp_data):
-    resp = ask_gpt(temp_data, prompt_lib.summary_prompt, output_format).markdown_summary
+def summary_process(temp_data, max_tokens=16384, model_name="gpt-4o", temperature=0.7, reasoning_effort="medium"):
+    resp = ask_gpt(temp_data, prompt_lib.summary_prompt, output_format, max_tokens, model_name, temperature, reasoning_effort).markdown_summary
     return resp
 
 
@@ -74,6 +74,7 @@ if __name__ == "__main__":
     for day in data_by_time:
         if day.replace("-", "_")+".md" in os.listdir(write_path_summary):   ## 이미 있는 날짜의 파일이면 다시 생성하지 않음.
             continue
+        print(day)
         f_name = day.replace("-", "_")+".md"
         temp = []
         temp_datas = []
@@ -99,8 +100,8 @@ if __name__ == "__main__":
                         temp.append(ask_gpt(chunk, prompt_lib.summary_prompt, output_format).markdown_summary)
                 else:
                     temp.append(ask_gpt(chat_room, prompt_lib.summary_prompt, output_format).markdown_summary)
-
-        after_data = process_multi_thread(temp_datas, summary_process) if b_multi_thread else temp
+        print(len(temp_datas))
+        after_data = process_multi_thread(temp_datas, summary_process, 16384, "gpt-4o", 0.7, "medium") if b_multi_thread else temp
 
         with open(os.path.join(write_path_summary, f_name), 'w', encoding='utf-8') as wr:
             wr.write("\n########## New Chat ##########\n".join(after_data))
