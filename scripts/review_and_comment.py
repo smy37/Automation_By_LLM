@@ -23,7 +23,7 @@ def ask_llm(diff_text):
     prompt = f"""You are a senior software engineer. Please review the following Git diff. 
     Provide a concise review about potential bugs, style issues, or performance concerns."""
 
-    response = openai.ChatCompletion.create(
+    response = openai.beta.chat.completions.parse(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a professional code reviewer."},
