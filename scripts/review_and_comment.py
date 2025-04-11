@@ -21,7 +21,8 @@ def get_git_diff():
 
 def ask_llm(diff_text):
     prompt = f"""You are a senior software engineer. Please review the following Git diff. 
-    Provide a concise review about potential bugs, style issues, or performance concerns."""
+    Provide a concise review about potential bugs, style issues, or performance concerns.
+{diff_text[:7500]}"""
 
     response = openai.beta.chat.completions.parse(
         model="gpt-4o",
@@ -31,7 +32,7 @@ def ask_llm(diff_text):
         ],
         temperature=0.3
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 
 def post_github_comment(review_text):
