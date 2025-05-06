@@ -21,7 +21,7 @@ def get_git_diff():
 
 def ask_llm(diff_text):
     prompt = f"""You are a senior software engineer. Please review the following Git diff. 
-    Provide a concise review about potential bugs, style issues, or performance concerns.\n
+    Provide a concise review about potential bugs, style issues, or performance concerns. Respond in Korean.\n
 {diff_text[:7500]}"""
 
     response = openai.beta.chat.completions.parse(
