@@ -21,7 +21,7 @@ def get_git_diff():
 
 def ask_llm(diff_text):
     prompt = f"""You are a senior software engineer. Please review the following Git diff. 
-    Provide a concise review about potential bugs, style issues, or performance concerns.
+    Provide a concise review about potential bugs, style issues, or performance concerns.\n
 {diff_text[:7500]}"""
 
     response = openai.beta.chat.completions.parse(
@@ -42,7 +42,7 @@ def post_github_comment(review_text):
         "Accept": "application/vnd.github+json"
     }
     data = {
-        "body": f"**Automated Code Review by GPT-4:**\n\n{review_text}"
+        "body": f"**Automated Code Review by LLM:**\n\n{review_text}"
     }
 
     response = requests.post(url, headers=headers, json=data)

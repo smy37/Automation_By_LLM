@@ -2,4 +2,5 @@
 gpt_summary/conversations.json
 gpt_summary/common/openai_api.py
 gpt_summary/result
+gpt_summary/artifact
 **/__pycache__/
